@@ -11,18 +11,27 @@ for app in jupyterlab code-editor; do
   test -f /etc/supervisor/conf.d/supervisord-workspace-$app.conf
 done
 
-# JupyterLab must come up behind WORKSPACE_BASE_URL via supervisord, even when no Native SSH config is present.
+# Each app must come up via supervisord behind WORKSPACE_BASE_URL, even when no Native SSH config is present.
 export WORKSPACE_BASE_URL=/workspaces/test/
 sudo mkdir -p /var/log/sagemaker/workspace /var/run/supervisord
 sudo chown -R "$(id -u)" /var/log/sagemaker/workspace /var/run/supervisord
-entrypoint-workspace-jupyterlab > /tmp/workspace.log 2>&1 &
 
-for i in $(seq 1 60); do
-  if curl -sf "http://localhost:8888${WORKSPACE_BASE_URL}api/status" >/dev/null; then
-    echo "JupyterLab workspace is up"
-    exit 0
-  fi
-  sleep 2
-done
-cat /tmp/workspace.log
-exit 1
+wait_for_app() {
+  local app=$1 path=$2 pid
+  entrypoint-workspace-$app > /tmp/workspace-$app.log 2>&1 &
+  pid=$!
+  for i in $(seq 1 60); do
+    if curl -sf "http://localhost:8888${WORKSPACE_BASE_URL}${path}" >/dev/null; then
+      echo "$app workspace is up"
+      kill "$pid"
+      wait "$pid" || true
+      return 0
+    fi
+    sleep 2
+  done
+  cat /tmp/workspace-$app.log
+  return 1
+}
+
+wait_for_app jupyterlab api/status
+wait_for_app code-editor ""
