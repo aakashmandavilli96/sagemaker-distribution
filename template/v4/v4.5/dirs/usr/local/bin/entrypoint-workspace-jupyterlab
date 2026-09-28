@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+# Supervisord based startup script for JupyterLab server workspace.
+
+echo "Start JupyterLab workspace via supervisord."
+
+# Generate and execute the shell code to modifies shell variables to include
+# micromamba commands (e.g. using `micromamba activate` to activate environments)
+eval "$(micromamba shell hook --shell=bash)"
+
+# Activate conda environment 'base' which contains the supervisord.
+micromamba activate base
+
+export WORKSPACE_APP_TYPE="jupyterlab"
+export WORKSPACE_LOGGING_DIR="/var/log/sagemaker/workspace"
+
+# Start supervisord with supervisord configuration
+mkdir -p "$WORKSPACE_LOGGING_DIR/$WORKSPACE_APP_TYPE/supervisord"
+exec supervisord -c /etc/supervisor/conf.d/supervisord-workspace-${WORKSPACE_APP_TYPE}.conf -n
