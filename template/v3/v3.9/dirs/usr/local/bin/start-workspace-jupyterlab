@@ -1,0 +1,74 @@
+#!/bin/bash
+set -e
+
+echo "Starting JupyterLab workspace"
+
+# Activate conda environment 'base'
+echo "activating SMD based image settings"
+eval "$(micromamba shell hook --shell=bash)"
+micromamba activate base
+
+# Disable extensions, for first delivery only bare bone JupyterLab UX is supported.
+micromamba remove -y --no-prune sagemaker-studio-dataengineering-sessions sagemaker-studio-dataengineering-extensions || true
+
+# Remove RTC v2 stack (JSD + Jupyter AI) so classic docprovider is the sole RTC provider.
+micromamba remove -y jupyter_server_documents jupyter-ai jupyterlab-chat || true
+jupyter labextension disable \
+        sagemaker-data-explorer:plugin \
+        @jupyter-ai/core \
+        @amzn/sagemaker_gen_ai_jupyterlab_extension \
+        amazon-q-developer-jupyterlab-ext \
+        @amzn/sagemaker-jupyterlab-extension-common \
+        @amzn/amazon_sagemaker_sql_editor \
+        @amzn/sagemaker_post_startup_notification_plugin \
+        @amzn/sagemaker-post-startup-notification-plugin:custom-terminal-launcher-plugin \
+        @amzn/sagemaker-jupyterlab-emr-extension \
+        @amzn/sagemaker-connection-magics-jlextension \
+        @jupyterlab/scheduler \
+        @amzn/sagemaker-studio-jupyter-scheduler \
+        @amzn/sagemaker-jupyter-scheduler \
+        @amzn/amazon_sagemaker_jupyter_ai_q_developer \
+        @amzn/amzn_sagemaker_aiops_jupyterlab_extension \
+        @amzn/sagemaker-data-explorer-jl-plugin \
+        @amzn/amazon_sagemaker_sql_editor || true
+
+set -x
+# Base command array
+CMD=(jupyter lab --ip=0.0.0.0 --port=8888 "--ServerApp.token=" "--ServerApp.allow_origin=*")
+
+# Add base_url if set
+if [ -n "${WORKSPACE_BASE_URL:-}" ]; then
+  CMD+=("--ServerApp.base_url=${WORKSPACE_BASE_URL}")
+fi
+
+# Function to check if a Python package exists
+pkg_exists() {
+  python -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('$1') else 1)"
+}
+
+jupyter labextension enable @jupyter/docprovider-extension
+jupyter labextension enable @jupyter/collaboration-extension
+
+# Enable collaborative mode and identity provider for public/shared workspaces
+if [[ "${WORKSPACE_ACCESS_TYPE:-}" =~ ^(Public|OwnerOrShare)$ ]]; then
+  echo "Public/shared workspace detected."
+
+  if pkg_exists "jupyter_collaboration"; then
+    echo "Enabling collaborative mode."
+    CMD+=(--collaborative)
+  fi
+
+  if python -c "from sagemaker_jupyterlab_extension_common.identity import WorkSpaceIdentityProvider" &>/dev/null; then
+    echo "Enabling workspace identity provider."
+    CMD+=("--ServerApp.identity_provider_class=sagemaker_jupyterlab_extension_common.identity.WorkSpaceIdentityProvider")
+  fi
+fi
+
+# Set landing directory if specified
+if [ -n "${WORKSPACE_DEFAULT_DIR:-}" ]; then
+  CMD+=("--ServerApp.root_dir=${WORKSPACE_DEFAULT_DIR}")
+fi
+
+# Launch JupyterLab
+echo "Executing: ${CMD[*]}"
+exec "${CMD[@]}"

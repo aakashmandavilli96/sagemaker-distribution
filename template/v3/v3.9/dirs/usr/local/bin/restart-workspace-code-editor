@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+echo "Restarting the CodeEditor server for workspace."
+
+export WORKSPACE_APP_TYPE="code-editor"
+
+nohup supervisorctl -c /etc/supervisor/conf.d/supervisord-workspace-${WORKSPACE_APP_TYPE}.conf restart workspace-${WORKSPACE_APP_TYPE} > /dev/null 2>&1 &
