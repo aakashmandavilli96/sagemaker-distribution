@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e
+
+# Parker workspace startup script for Code Editor, launched by supervisord-workspace-code-editor.conf.
+
+echo "Starting Code Editor workspace"
+
+eval "$(micromamba shell hook --shell=bash)"
+micromamba activate base
+
+set -x
+
+BASE_PATH_ARG=""
+if [ -n "${WORKSPACE_BASE_URL}" ]; then
+  BASE_PATH_ARG="--base-path ${WORKSPACE_BASE_URL}"
+fi
+
+# Set landing directory if specified
+DEFAULT_FOLDER_ARG=""
+if [ -n "${WORKSPACE_DEFAULT_DIR:-}" ]; then
+  DEFAULT_FOLDER_ARG="--default-folder ${WORKSPACE_DEFAULT_DIR}"
+fi
+
+sagemaker-code-editor \
+  --host 0.0.0.0 \
+  --port 8888 \
+  --without-connection-token \
+  ${BASE_PATH_ARG} \
+  ${DEFAULT_FOLDER_ARG} \
+  --server-data-dir /opt/amazon/sagemaker/sagemaker-code-editor-server-data \
+  --extension-dir /opt/amazon/sagemaker/sagemaker-code-editor-server-data/extensions \
+  --user-data-dir /opt/amazon/sagemaker/sagemaker-code-editor-user-data

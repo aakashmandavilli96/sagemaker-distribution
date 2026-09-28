@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+echo "Restarting the JupyterLab server for workspace. This page should refresh in a few seconds. Note that any terminals will be closed."
+echo "If this page doesn't refresh after a few seconds, try reloading your browser window."
+echo "Restarting now..."
+
+
+export WORKSPACE_APP_TYPE="jupyterlab"
+
+nohup supervisorctl -c /etc/supervisor/conf.d/supervisord-workspace-${WORKSPACE_APP_TYPE}.conf restart workspace-${WORKSPACE_APP_TYPE} > /dev/null 2>&1 &
