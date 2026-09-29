@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Parker workspace startup script for Code Editor, launched by supervisord-workspace-code-editor.conf.
+# HyperPod workspace startup script for Code Editor, launched by supervisord-workspace-code-editor.conf.
 
 echo "Starting Code Editor workspace"
 

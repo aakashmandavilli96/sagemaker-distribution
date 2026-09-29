@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Contract tests for the Parker (HyperPod workspace) startup scripts.
+# Contract tests for the HyperPod workspace startup scripts.
 
 for app in jupyterlab code-editor; do
   for cmd in entrypoint-workspace-$app start-workspace-$app restart-workspace-$app; do
